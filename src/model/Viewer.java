@@ -23,7 +23,6 @@ public class Viewer extends Person {
 
             }
         }
-
     }
 
     private void viewAllBoats()
