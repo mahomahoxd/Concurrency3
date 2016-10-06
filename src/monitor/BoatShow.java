@@ -12,7 +12,7 @@ public class BoatShow {
     private final int maxUsers;                                                 //Max users that can enter the boatshow simuntaniously
     private int successiveBuyers;                                               //The successive buyers that have been to the shop and bought a yacht
     private int numberOfUsersInShow;                                            //The users that are in the show
-    private boolean allViewersSent;                                             //Special condition
+    private boolean allViewersSent = false;                                             //Special condition
 
     private int numbersOfViewersInQueue;                                        //Number of viewers that are in queue
     private int numbersOfBuyersInQueue;                                         //Number of buyers in queue
@@ -55,16 +55,13 @@ public class BoatShow {
             } else if (person instanceof Viewer) {
                 numbersOfViewersInQueue++;
                 System.out.println("Number of viewers in queue " + numbersOfViewersInQueue);
-                while(hasBuyersInQueue() || noRoomLeft() || !allViewersSent)
-                {
-                    System.out.println(hasBuyersInQueue() + " " + noRoomLeft() + " " + allViewersSent);
+                while(hasBuyersInQueue() || noRoomLeft()) {
                     System.out.println(person.toString() + " waiting to get invited");
                     nextViewer.await();
                 }
                 numbersOfViewersInQueue--;
-                numberOfUsersInShow++;
                 System.out.println(person.toString() + " invited");
-
+                numberOfUsersInShow++;
             }
         }
         finally{lock.unlock();}
