@@ -16,7 +16,7 @@ public class Main {
         Thread[] viewers;
 
         buyers = new Thread[2]; //2 buyers
-        viewers = new Thread[10]; //10 viewers
+        viewers = new Thread[15]; //10 viewers
 
         for (int i = 0; i < buyers.length; i++) {
             buyers[i] = new Buyer(i,"buyer" + i,boatShow);

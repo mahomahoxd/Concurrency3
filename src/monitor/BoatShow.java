@@ -11,8 +11,11 @@ public class BoatShow {
 
     private final int maxUsers;                                                 //Max users that can enter the boatshow simuntaniously
     private int successiveBuyers;                                               //The successive buyers that have been to the shop and bought a yacht
-    private int numberOfUsersInShow;                                            //The users that are in the show
-    private boolean allViewersSent = false;                                     //Special condition
+    private int numberOfBuyersInShow;
+    private int numberOfViewersInShow;                                          //The users that are in the show
+
+    private boolean allViewersSent;                                             //Special condition
+    private int numberOfViewersSpecial;
 
     private int numbersOfViewersInQueue;                                        //Number of viewers that are in queue
     private int numbersOfBuyersInQueue;                                         //Number of buyers in queue
@@ -21,11 +24,15 @@ public class BoatShow {
     private Condition nextBuyer,nextViewer;                                     //The conditions for the threads
     public BoatShow(int maxUsers)
     {
-        this.maxUsers = maxUsers;
-        this.successiveBuyers = 0;
-        this.numbersOfViewersInQueue = 0;
-        this.numbersOfBuyersInQueue = 0;
+        successiveBuyers = 0;
+        numberOfBuyersInShow = 0;
+        numberOfViewersInShow = 0;
+        numberOfViewersSpecial = 0;
+        numbersOfViewersInQueue = 0;
+        numbersOfBuyersInQueue = 0;
+        allViewersSent = false;
 
+        this.maxUsers = maxUsers;
         lock = new ReentrantLock();
         nextBuyer = lock.newCondition();
         nextViewer = lock.newCondition();
@@ -41,25 +48,43 @@ public class BoatShow {
     {
         lock.lock();
         try {
+            //If the user in the queue is a Buyer.
             if (person instanceof Buyer) {
+                //+1 on the buyers queue length
                 numbersOfBuyersInQueue++;
-                System.out.println("Number of buyers in queue " + numbersOfBuyersInQueue);
-                while (hasUsersInShow() || allViewersSent) {
+
+                //Stuck in a loop if :
+                //Buyers are in the show
+                //Has viewers in the show
+                //If special condition has occured.
+                while (hasBuyersInShow() || hasViewersInShow() || allViewersSent) {
+                    System.out.println(person.toString() + " is waiting");
                     nextBuyer.await();
                 }
-                numbersOfBuyersInQueue--;
-                numberOfUsersInShow++;
                 System.out.println(person.toString() + " invited");
+                //Invited so buyers in queue is one less, +1 to buyers in the show.
+                System.out.println("Number of viewers in show : " + numberOfViewersInShow);
+                numbersOfBuyersInQueue--;
+                numberOfBuyersInShow++;
 
-            } else if (person instanceof Viewer) {
+            }
+            //If the person is a Viewer
+            else if (person instanceof Viewer) {
+                //+1 to viewers in the queue
                 numbersOfViewersInQueue++;
-                System.out.println("Number of viewers in queue " + numbersOfViewersInQueue);
-                while((hasBuyersInQueue() && !allViewersSent) || noRoomLeft()) {
+
+                //Stuck in here if :
+                //There are buyers in the show
+                //If the buyers are in queue but if all viewers are sent ignore that
+                //If the special condition applies, checks if the user was on the invite list to
+
+                while(hasBuyersInShow() || (hasBuyersInQueue() && !allViewersSent) || noRoomLeft()) {
+                    System.out.println(person.toString() + " is waiting");
                     nextViewer.await();
                 }
-                numbersOfViewersInQueue--;
                 System.out.println(person.toString() + " invited");
-                numberOfUsersInShow++;
+                numbersOfViewersInQueue--;
+                numberOfViewersInShow++;
             }
         }
         finally{lock.unlock();}
@@ -89,61 +114,91 @@ public class BoatShow {
     public void leaveShow(Person user)
     {
         lock.lock();
-        numberOfUsersInShow--;
-        if(user instanceof Buyer && isSuccessiveBuyersMet())
-        {
-            successiveBuyers = 0;
-            sendAllViewersToShow();
-            return;
-        }
-        System.out.println("Number of people in the show : " + numberOfUsersInShow);
-        if(!hasUsersInShow())
-        {
-            allViewersSent = false;
-            System.out.println(allViewersSent);
-            if(numbersOfBuyersInQueue >0)
-            {
-                nextBuyer.signal();
+        try {
+            if (user instanceof Buyer) {
+                numberOfBuyersInShow--;
+                if (isSuccessiveBuyersMet()) {
+                    successiveBuyers = 0;
+                    sendAllViewersToShow();
+                }
+            } else if (user instanceof Viewer) {
+                numberOfViewersInShow--;
+                if(isSpecialConditionViewer()) {
+                    numberOfViewersSpecial--;
+                }
+                if (!hasViewersInShow()) {
+                    //just in case if it was true
+                    allViewersSent = false;
+                }
             }
-            else
-            {
-                nextViewer.signalAll();
+            //Normal rules apply
+            if (!allViewersSent) {
+                if (numbersOfBuyersInQueue > 0) {
+                    nextBuyer.signal();
+                } else {
+                    nextViewer.signalAll();
+                }
             }
         }
-        lock.unlock();
-        System.out.println(user.toString() + " HAS LEFT DA BUILDIN.");
+        finally {
+            lock.unlock();
+        }
+        System.out.println(user.toString() + " has left the HISWA.");
     }
 
-    public boolean isSuccessiveBuyersMet()
+    private boolean isSuccessiveBuyersMet()
     {
         return successiveBuyers == 4;
     }
 
-    public boolean hasUsersInShow()
+    private boolean hasViewersInShow()
     {
-        return numberOfUsersInShow > 0;
+        return numberOfViewersInShow > 0;
     }
 
-    public boolean hasBuyersInQueue()
+    private boolean hasBuyersInShow()
+    {
+        return numberOfBuyersInShow > 0;
+    }
+
+    private boolean hasBuyersInQueue()
     {
         return numbersOfBuyersInQueue > 0;
     }
 
-    public boolean noRoomLeft()
+    private boolean noRoomLeft()
     {
-        
-        return numberOfUsersInShow == maxUsers;
+        if(allViewersSent) {
+            return false;
+        }
+        else if(numberOfBuyersInShow > 0) {
+            return true;
+        }
+        else if(numberOfViewersInShow == maxUsers) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
-    public boolean hasUsersInQueue()
+    private boolean isSpecialConditionViewer()
     {
-        return numbersOfViewersInQueue + numbersOfBuyersInQueue == 0;
+        if(numberOfViewersSpecial > 0)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
-    public void sendAllViewersToShow()
+    private void sendAllViewersToShow()
     {
         allViewersSent = true;
+        System.out.println(numberOfViewersSpecial + " " + numbersOfViewersInQueue);
+        numberOfViewersSpecial = numbersOfViewersInQueue;
         nextViewer.signalAll();
     }
-
 }
