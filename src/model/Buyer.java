@@ -32,7 +32,6 @@ public class Buyer extends Person {
         try
         {
             System.out.println(toString() + " is looking at yachts now");
-            //Thread.sleep((int)(Math.random() * 5000));
             Thread.sleep(5000);
             System.out.println(toString() + " has finished looking at yachts, will decide to buy or not now.");
         }
