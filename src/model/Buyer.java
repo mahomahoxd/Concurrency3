@@ -41,7 +41,6 @@ public class Buyer extends Person {
 
     private void buyYacht() throws InterruptedException
     {
-        /*
         int randomNumber = (Math.random() <= 0.5) ? 1 :2;
         if(randomNumber == 1)
         {
@@ -55,7 +54,5 @@ public class Buyer extends Person {
             System.out.println(toString() + " bought no yacht.");
             boatShow.buyYacht(false);
         }
-        */
-        boatShow.buyYacht(true);
     }
  }
